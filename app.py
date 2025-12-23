@@ -40,53 +40,36 @@ def generate_paper(chapter):
     prompt = f"""
 You are a friendly Class 7 Maths teacher.
 
-Create ONE multiple-choice question based on:
-Chapter: {chapter}
+Create ONE multiple-choice question for a 12-year-old student.
 
-Student age: 12 years
+Chapter: {chapter}
 
 Rules:
 - Do NOT show the correct answer directly
-- Language must be very simple and encouraging
-- Question must be syllabus-appropriate
+- Use very simple language
+- Make wrong options based on common mistakes
 
-Include the following:
+Return ONLY valid JSON. No extra text.
 
-1. Question
-2. Four options (A, B, C, D)
-   - One correct answer
-   - Three incorrect answers based on common mistakes
-3. Correct option letter (for internal use only)
-4. Feedback if the student selects the WRONG answer:
-   - A gentle hint (not the full answer)
-   - Explain the concept in very easy language
-   - Use a real-life analogy a 12-year-old can relate to
-   - Give one small worked example
-5. Feedback if the student selects the CORRECT answer:
-   - One line of encouragement
-   - One-line explanation why it is correct
-
-IMPORTANT:
-Return ONLY valid JSON in the exact format below.
-Do not add any extra text.
-
-{
+JSON format:
+{{
   "question": "",
-  "options": {
+  "options": {{
     "A": "",
     "B": "",
     "C": "",
     "D": ""
-  },
+  }},
   "correct_option": "",
   "correct_feedback": "",
-  "wrong_feedback": {
+  "wrong_feedback": {{
     "hint": "",
     "concept": "",
     "analogy": "",
     "example": ""
-  }
-}
+  }}
+}}
+"""
 """
 
     response = client.responses.create(
