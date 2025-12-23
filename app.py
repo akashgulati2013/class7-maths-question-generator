@@ -70,7 +70,7 @@ JSON format:
   }}
 }}
 """
-"""
+
 
     response = client.responses.create(
         model="gpt-4.1-mini",
