@@ -2,22 +2,14 @@ import streamlit as st
 import json
 from openai import OpenAI
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="Smart Maths Learning", layout="centered")
-st.title("📘 Smart Maths Learning (Class 7) for Ranbeer")
+# ------------------ PAGE CONFIG ------------------
+st.set_page_config(page_title="Class 7 Maths – Learn & Practice", layout="centered")
+st.title("📘 Class 7 Maths – Learn & Practice Smartly")
 
-# ---------------- OPENAI CLIENT ----------------
+# ------------------ OPENAI CLIENT ------------------
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ---------------- SESSION STATE ----------------
-if "question_data" not in st.session_state:
-    st.session_state.question_data = None
-    st.session_state.answered = False
-    st.session_state.correct = 0
-    st.session_state.wrong = 0
-    st.session_state.total = 0
-
-# ---------------- CHAPTER SELECT ----------------
+# ------------------ USER INPUT ------------------
 chapter = st.selectbox(
     "📚 Select Chapter",
     [
@@ -29,26 +21,39 @@ chapter = st.selectbox(
     ]
 )
 
-# ---------------- AI QUESTION GENERATOR ----------------
+# ------------------ AI QUESTION GENERATOR ------------------
 def generate_question(chapter):
     prompt = f"""
-You are a friendly Class 7 Maths teacher.
+You are a friendly and creative Class 7 Maths teacher.
 
-Create ONE multiple-choice question.
+Create ONE multiple-choice question for a 12-year-old student.
 
-Rules:
-- Ask the question FIRST
-- 4 options (A, B, C, D)
-- One correct answer
-- Concept explanation AFTER answering
-- Concept explanation must be ONE PARAGRAPH
-- Language suitable for a 12-year-old
-- Include visual/story-like explanation inside the paragraph
+Chapter: {chapter}
 
-Return ONLY valid JSON.
+Teaching Style:
+- Very simple language
+- Bullet points
+- Friendly, encouraging tone
+- Think like a school teacher using cartoons and stories
+
+IMPORTANT RULES:
+- Do NOT reveal the correct answer directly
+- Wrong options should be common student mistakes
+- Help the child understand AND remember
+
+Return ONLY valid JSON. No extra text.
 
 JSON FORMAT:
 {{
+  "concept_explanation": {{
+    "title": "",
+    "bullets": [
+      "",
+      "",
+      ""
+    ],
+    "cartoon_idea": ""
+  }},
   "question": "",
   "options": {{
     "A": "",
@@ -57,10 +62,11 @@ JSON FORMAT:
     "D": ""
   }},
   "correct_option": "",
-  "concept_explanation": "",
   "correct_feedback": "",
   "wrong_feedback": {{
     "hint": "",
+    "concept": "",
+    "analogy": "",
     "example": ""
   }}
 }}
@@ -73,63 +79,60 @@ JSON FORMAT:
 
     return json.loads(response.output_text)
 
-# ---------------- AUTO LOAD FIRST QUESTION ----------------
-if st.session_state.question_data is None:
+# ------------------ SESSION STATE ------------------
+if "question_data" not in st.session_state:
+    st.session_state.question_data = None
+    st.session_state.answered = False
+
+# ------------------ GENERATE QUESTION ------------------
+if st.button("✨ Generate New Question"):
     st.session_state.question_data = generate_question(chapter)
+    st.session_state.answered = False
 
-data = st.session_state.question_data
+# ------------------ DISPLAY QUESTION ------------------
+if st.session_state.question_data:
+    data = st.session_state.question_data
 
-# ---------------- DISPLAY QUESTION ----------------
-st.subheader("❓ Question")
-st.write(data["question"])
+    # ---------- CONCEPT EXPLANATION ----------
+    st.subheader("🧠 Concept to Remember")
+    st.markdown(f"**{data['concept_explanation']['title']}**")
 
-selected = st.radio(
-    "Choose your answer:",
-    options=list(data["options"].keys()),
-    format_func=lambda x: f"{x}. {data['options'][x]}"
-)
+    for bullet in data["concept_explanation"]["bullets"]:
+        st.markdown(f"- {bullet}")
 
-# ---------------- CHECK ANSWER ----------------
-if st.button("✅ Check Answer") and not st.session_state.answered:
-    st.session_state.answered = True
-    st.session_state.total += 1
-
-    if selected == data["correct_option"]:
-        st.session_state.correct += 1
-        st.success("🎉 " + data["correct_feedback"])
-    else:
-        st.session_state.wrong += 1
-        st.error("❌ That's okay, learning happens here!")
-        st.info("💡 Hint: " + data["wrong_feedback"]["hint"])
-        st.info("✏️ Example: " + data["wrong_feedback"]["example"])
+    st.info("🎨 Imagine this like a cartoon:")
+    st.write(data["concept_explanation"]["cartoon_idea"])
 
     st.divider()
-    st.subheader("📘 Concept Explanation")
-    st.write(data["concept_explanation"])
 
-# ---------------- NEXT QUESTION ----------------
-if st.session_state.answered:
-    if st.button("➡️ Next Question"):
-        st.session_state.question_data = generate_question(chapter)
-        st.session_state.answered = False
+    # ---------- QUESTION ----------
+    st.subheader("❓ Question")
+    st.write(data["question"])
 
-# ---------------- REPORT CARD ----------------
-st.divider()
-if st.button("📄 Generate Report Card"):
-    accuracy = (
-        (st.session_state.correct / st.session_state.total) * 100
-        if st.session_state.total > 0 else 0
+    selected = st.radio(
+        "Choose your answer:",
+        options=list(data["options"].keys()),
+        format_func=lambda x: f"{x}. {data['options'][x]}"
     )
 
-    st.subheader("📊 Report Card")
-    st.write(f"📘 Total Questions: {st.session_state.total}")
-    st.write(f"✅ Correct Answers: {st.session_state.correct}")
-    st.write(f"❌ Wrong Answers: {st.session_state.wrong}")
-    st.write(f"🎯 Accuracy: {accuracy:.1f}%")
+    # ---------- CHECK ANSWER ----------
+    if st.button("✅ Check Answer"):
+        st.session_state.answered = True
 
-    if accuracy >= 80:
-        st.success("🌟 Excellent work! Keep it up!")
-    elif accuracy >= 50:
-        st.info("👍 Good progress! Practice a bit more.")
-    else:
-        st.warning("💪 Don't worry! Learning takes time.")
+        if selected == data["correct_option"]:
+            st.success("🎉 " + data["correct_feedback"])
+        else:
+            st.error("❌ Not quite. Let’s learn it step by step 👇")
+            st.info("💡 Hint: " + data["wrong_feedback"]["hint"])
+            st.info("📘 Concept: " + data["wrong_feedback"]["concept"])
+            st.info("🧠 Analogy: " + data["wrong_feedback"]["analogy"])
+            st.info("✏️ Example: " + data["wrong_feedback"]["example"])
+
+    # ---------- NEXT QUESTION ----------
+    if st.session_state.answered:
+        st.button(
+            "➡️ Next Question",
+            on_click=lambda: st.session_state.update(
+                {"question_data": None, "answered": False}
+            )
+        )
