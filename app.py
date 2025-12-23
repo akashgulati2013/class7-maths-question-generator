@@ -1,14 +1,27 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 
+# ---------------- PAGE SETUP ----------------
 st.set_page_config(page_title="Class 7 Maths Question Generator", layout="wide")
 
 st.title("📘 Class 7 Maths – Question Paper Generator")
 st.write("Practice questions with **hidden answers** so students can try first.")
 
-# API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# ---------------- API KEY ----------------
+api_key = None
 
+if "OPENAI_API_KEY" in st.secrets:
+    api_key = st.secrets["OPENAI_API_KEY"]
+else:
+    api_key = st.text_input("Enter OpenAI API Key", type="password")
+
+if not api_key:
+    st.warning("Please enter your OpenAI API key to continue.")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+# ---------------- UI ----------------
 chapter = st.selectbox(
     "Select Chapter",
     [
@@ -22,6 +35,7 @@ chapter = st.selectbox(
 
 generate = st.button("Generate Question Paper")
 
+# ---------------- AI LOGIC ----------------
 def generate_paper(chapter):
     prompt = f"""
 You are a Class 7 Mathematics teacher.
@@ -46,15 +60,14 @@ For EACH question provide:
 5. Related Concepts
 """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
     )
 
-    return response.choices[0].message.content
+    return response.output_text
 
-
+# ---------------- OUTPUT ----------------
 if generate:
     with st.spinner("Creating question paper..."):
         content = generate_paper(chapter)
