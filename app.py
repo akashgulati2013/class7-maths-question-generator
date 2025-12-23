@@ -4,7 +4,7 @@ from openai import OpenAI
 
 # ------------------ CONFIG ------------------
 st.set_page_config(page_title="Class 7 Maths Practice", layout="centered")
-st.title("📘 Class 7 Maths – Smart Practice")
+st.title("📘 Class 7 Maths – Practive as you go")
 
 # ------------------ OPENAI CLIENT ------------------
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
