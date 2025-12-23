@@ -1,42 +1,28 @@
 import streamlit as st
+import json
 from openai import OpenAI
 
-# ---------------- PAGE SETUP ----------------
-st.set_page_config(page_title="Class 7 Maths Question Generator", layout="wide")
+# ------------------ CONFIG ------------------
+st.set_page_config(page_title="Class 7 Maths Practice", layout="centered")
+st.title("📘 Class 7 Maths – Smart Practice")
 
-st.title("📘 Class 7 Maths – Question Paper Generator")
-st.write("Practice questions with **hidden answers** so students can try first.")
+# ------------------ OPENAI CLIENT ------------------
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ---------------- API KEY ----------------
-api_key = None
-
-if "OPENAI_API_KEY" in st.secrets:
-    api_key = st.secrets["OPENAI_API_KEY"]
-else:
-    api_key = st.text_input("Enter OpenAI API Key", type="password")
-
-if not api_key:
-    st.warning("Please enter your OpenAI API key to continue.")
-    st.stop()
-
-client = OpenAI(api_key=api_key)
-
-# ---------------- UI ----------------
+# ------------------ USER INPUT ------------------
 chapter = st.selectbox(
     "Select Chapter",
     [
         "Integers",
         "Fractions and Decimals",
-        "Algebraic Expressions",
         "Simple Equations",
-        "Lines and Angles"
+        "Lines and Angles",
+        "Perimeter and Area"
     ]
 )
 
-generate = st.button("Generate Question Paper")
-
-# ---------------- AI LOGIC ----------------
-def generate_paper(chapter):
+# ------------------ AI LOGIC ------------------
+def generate_question(chapter):
     prompt = f"""
 You are a friendly Class 7 Maths teacher.
 
@@ -47,7 +33,8 @@ Chapter: {chapter}
 Rules:
 - Do NOT show the correct answer directly
 - Use very simple language
-- Make wrong options based on common mistakes
+- Wrong options should reflect common mistakes
+- Make learning gentle and encouraging
 
 Return ONLY valid JSON. No extra text.
 
@@ -71,30 +58,48 @@ JSON format:
 }}
 """
 
-
     response = client.responses.create(
         model="gpt-4.1-mini",
         input=prompt
     )
 
-    return response.output_text
+    return json.loads(response.output_text)
 
-# ---------------- OUTPUT ----------------
-if generate:
-    with st.spinner("Creating question paper..."):
-        content = generate_paper(chapter)
+# ------------------ UI LOGIC ------------------
+if "question_data" not in st.session_state:
+    st.session_state.question_data = None
+    st.session_state.answered = False
 
-    st.subheader("📝 Question Paper")
+if st.button("Generate Question"):
+    st.session_state.question_data = generate_question(chapter)
+    st.session_state.answered = False
 
-    questions = content.split("Question")
+# ------------------ DISPLAY QUESTION ------------------
+if st.session_state.question_data:
+    data = st.session_state.question_data
 
-    for i, q in enumerate(questions):
-        if q.strip():
-            st.markdown(f"### Question {i}")
-            parts = q.split("Final Answer")
+    st.subheader("🧠 Question")
+    st.write(data["question"])
 
-            st.write(parts[0])
+    selected = st.radio(
+        "Choose your answer:",
+        options=list(data["options"].keys()),
+        format_func=lambda x: f"{x}. {data['options'][x]}"
+    )
 
-            with st.expander("👉 Click to view Answer & Explanation"):
-                if len(parts) > 1:
-                    st.write("Final Answer" + parts[1])
+    if st.button("Check Answer"):
+        st.session_state.answered = True
+
+        if selected == data["correct_option"]:
+            st.success("✅ " + data["correct_feedback"])
+        else:
+            st.error("❌ Not quite. Let’s understand it better 👇")
+            st.info("💡 Hint: " + data["wrong_feedback"]["hint"])
+            st.info("📘 Concept: " + data["wrong_feedback"]["concept"])
+            st.info("🧠 Analogy: " + data["wrong_feedback"]["analogy"])
+            st.info("✏️ Example: " + data["wrong_feedback"]["example"])
+
+    if st.session_state.answered:
+        st.button("Next Question", on_click=lambda: st.session_state.update(
+            {"question_data": None, "answered": False}
+        ))
